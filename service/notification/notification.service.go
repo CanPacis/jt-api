@@ -17,6 +17,16 @@ import (
 	"google.golang.org/api/option"
 )
 
+// Notification common notification model
+type Notification struct {
+	ID     primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	Title  string             `json:"title,omitempty" bson:"title,omitempty"`
+	Body   string             `json:"body,omitempty" bson:"body,omitempty"`
+	Date   primitive.DateTime `json:"date,omitempty" bson:"date,omitempty"`
+	Data   interface{}        `json:"data" bson:"data"`
+	Opened bool               `json:"opened" bson:"opened"`
+}
+
 var app *firebase.App
 
 // InitFirebase initializes the firebase admin
@@ -149,6 +159,23 @@ func SendNotification(id primitive.ObjectID, notification messaging.Notification
 	if err != nil {
 		return err
 	}
+
+	save := Notification{
+		Title:  notification.Title,
+		Body:   notification.Body,
+		Date:   primitive.NewDateTimeFromTime(time.Now()),
+		Data:   map[string]string{},
+		Opened: false,
+	}
+
+	filter := bson.D{primitive.E{Key: "_id", Value: id}}
+	update := bson.D{
+		primitive.E{
+			Key:   "$push",
+			Value: bson.D{primitive.E{Key: "notifications", Value: save}},
+		},
+	}
+	collection.FindOneAndUpdate(ctx, filter, update)
 
 	return nil
 }

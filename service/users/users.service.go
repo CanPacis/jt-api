@@ -387,55 +387,58 @@ func follow(
 	followerID primitive.ObjectID,
 	followeeID primitive.ObjectID,
 ) error {
-	collection := db.Database("justhink-dev").Collection("users")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	if followerID != followeeID {
+		collection := db.Database("justhink-dev").Collection("users")
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
-	defer cancel()
+		defer cancel()
 
-	results := followed(db, response, request, followerID, followeeID)
+		results := followed(db, response, request, followerID, followeeID)
 
-	if len(results) > 0 {
-		if results[0]["followed"].(bool) {
-			response.WriteHeader(http.StatusBadRequest)
-			response.Write([]byte(`{ "message": "User already followed" }`))
+		if len(results) > 0 {
+			if results[0]["followed"].(bool) {
+				response.WriteHeader(http.StatusBadRequest)
+				response.Write([]byte(`{ "message": "User already followed" }`))
+				return nil
+			}
+			updateOpts := options.FindOneAndUpdate().SetUpsert(true)
+
+			followeeFilter := bson.D{primitive.E{Key: "_id", Value: followeeID}}
+			followeeUpdate := bson.D{primitive.E{
+				Key: "$push", Value: bson.D{primitive.E{Key: "followers", Value: followerID}},
+			}}
+			collection.FindOneAndUpdate(ctx, followeeFilter, followeeUpdate, updateOpts)
+
+			followerFilter := bson.D{primitive.E{Key: "_id", Value: followerID}}
+			followerUpdate := bson.D{primitive.E{
+				Key: "$push", Value: bson.D{primitive.E{Key: "follows", Value: followeeID}},
+			}}
+			collection.FindOneAndUpdate(ctx, followerFilter, followerUpdate, updateOpts)
+
+			// Send notification
+			var follower, followee bson.M
+
+			opts := options.FindOne().SetProjection(bson.D{
+				primitive.E{Key: "fullname", Value: "$fullname"},
+				primitive.E{Key: "username", Value: "$username"},
+				primitive.E{Key: "language", Value: "$language"},
+			})
+			collection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: followerID}}, opts).Decode(&follower)
+			collection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: followeeID}}, opts).Decode(&followee)
+
+			notification.SendNotification(followeeID, messaging.Notification{
+				Title: config.Languages[followee["language"].(string)].NewFollow(),
+				Body:  config.Languages[followee["language"].(string)].FollowStart(follower["fullname"].(string) + " (@" + follower["username"].(string) + ")"),
+			}, db)
+
+			response.Write([]byte(`{ "message": "OK" }`))
 			return nil
 		}
-		updateOpts := options.FindOneAndUpdate().SetUpsert(true)
 
-		followeeFilter := bson.D{primitive.E{Key: "_id", Value: followeeID}}
-		followeeUpdate := bson.D{primitive.E{
-			Key: "$push", Value: bson.D{primitive.E{Key: "followers", Value: followerID}},
-		}}
-		collection.FindOneAndUpdate(ctx, followeeFilter, followeeUpdate, updateOpts)
-
-		followerFilter := bson.D{primitive.E{Key: "_id", Value: followerID}}
-		followerUpdate := bson.D{primitive.E{
-			Key: "$push", Value: bson.D{primitive.E{Key: "follows", Value: followeeID}},
-		}}
-		collection.FindOneAndUpdate(ctx, followerFilter, followerUpdate, updateOpts)
-
-		// Send notification
-		var follower, followee bson.M
-
-		opts := options.FindOne().SetProjection(bson.D{
-			primitive.E{Key: "fullname", Value: "$fullname"},
-			primitive.E{Key: "username", Value: "$username"},
-			primitive.E{Key: "language", Value: "$language"},
-		})
-		collection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: followerID}}, opts).Decode(&follower)
-		collection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: followeeID}}, opts).Decode(&followee)
-
-		notification.SendNotification(followeeID, messaging.Notification{
-			Title: config.Languages[followee["language"].(string)].NewFollow(),
-			Body:  config.Languages[followee["language"].(string)].FollowStart(follower["fullname"].(string) + " (@" + follower["username"].(string) + ")"),
-		}, db)
-
-		response.Write([]byte(`{ "message": "OK" }`))
+		response.WriteHeader(http.StatusNotFound)
+		response.Write([]byte(`{ "message": "User Not Found" }`))
 		return nil
 	}
-
-	response.WriteHeader(http.StatusNotFound)
-	response.Write([]byte(`{ "message": "User Not Found" }`))
 	return nil
 }
 

@@ -704,10 +704,12 @@ func upvote(
 		usersCollection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: upvoterID}}, opts).Decode(&upvoter)
 		usersCollection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: post["author"]}}, opts).Decode(&upvotee)
 
-		notification.SendNotification(post["author"].(primitive.ObjectID), messaging.Notification{
-			Title: config.Languages[upvotee["language"].(string)].UpvoteTitle(),
-			Body:  config.Languages[upvotee["language"].(string)].PostUpvote(upvoter["fullname"].(string) + " (@" + upvoter["username"].(string) + ")"),
-		}, db)
+		if upvoter["_id"] != upvotee["_id"] {
+			notification.SendNotification(post["author"].(primitive.ObjectID), messaging.Notification{
+				Title: config.Languages[upvotee["language"].(string)].UpvoteTitle(),
+				Body:  config.Languages[upvotee["language"].(string)].PostUpvote(upvoter["fullname"].(string) + " (@" + upvoter["username"].(string) + ")"),
+			}, db)
+		}
 
 		response.Write([]byte(`{ "message": "OK" }`))
 		return nil
