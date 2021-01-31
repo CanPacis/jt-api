@@ -78,7 +78,7 @@ func main() {
 
 	// Upload route
 	uploadRoute := router.PathPrefix("/upload").Subrouter()
-	uploadRoute.HandleFunc("/", middleware.AuthMiddleware(upload.Image(client))).Methods("POST")
+	uploadRoute.HandleFunc("/", middleware.AuthMiddleware(upload.Image(client, 512))).Methods("POST")
 
 	// Search route
 	searchRoute := router.PathPrefix("/search").Subrouter()

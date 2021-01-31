@@ -1,7 +1,16 @@
 package upload
 
 import (
+	"bytes"
 	"encoding/json"
+	"image"
+	"image/jpeg"
+
+	// Decode jpg images
+	_ "image/jpeg"
+
+	// Decode png images
+	_ "image/png"
 	"net/http"
 	"os"
 	"regexp"
@@ -11,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/nfnt/resize"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -20,7 +30,7 @@ type ImageUpload struct {
 }
 
 // Image upload file to aws s3 bucket
-func Image(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
+func Image(db *mongo.Client, heightIndex int) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("content-type", "application/json")
 
@@ -32,6 +42,31 @@ func Image(db *mongo.Client) func(response http.ResponseWriter, request *http.Re
 		}
 
 		defer file.Close()
+
+		rawImage, _, err := image.Decode(file)
+		if err != nil {
+			response.WriteHeader(http.StatusInternalServerError)
+			response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+			return
+		}
+
+		width := rawImage.Bounds().Dx()
+		height := rawImage.Bounds().Dy()
+		ratio := height / heightIndex
+
+		resizedImage := resize.Resize(
+			uint(width/ratio),
+			uint(height/ratio),
+			rawImage,
+			resize.Lanczos3,
+		)
+		buffer := new(bytes.Buffer)
+		err = jpeg.Encode(buffer, resizedImage, nil)
+		if err != nil {
+			response.WriteHeader(http.StatusInternalServerError)
+			response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+			return
+		}
 
 		sess := session.Must(session.NewSession(&aws.Config{
 			Region: aws.String("eu-central-1"),
@@ -46,7 +81,7 @@ func Image(db *mongo.Client) func(response http.ResponseWriter, request *http.Re
 			ACL:    aws.String("public-read"),
 			Bucket: aws.String(os.Getenv("AWS_BUCKET")),
 			Key:    aws.String(name),
-			Body:   file,
+			Body:   bytes.NewReader(buffer.Bytes()),
 		})
 		if err != nil {
 			response.WriteHeader(http.StatusInternalServerError)
