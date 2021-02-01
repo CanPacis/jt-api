@@ -239,12 +239,12 @@ func CreateComment(db *mongo.Client) func(response http.ResponseWriter, request 
 
 // DeleteComment delete comment from database
 func DeleteComment(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
-	// TODO Delete comment id from post itself as well
 	return func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("content-type", "application/json")
 		params := mux.Vars(request)
 
-		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("comments")
+		commentsCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("comments")
+		postsCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		defer cancel()
@@ -263,8 +263,11 @@ func DeleteComment(db *mongo.Client) func(response http.ResponseWriter, request 
 
 			var result bson.M
 			filter := bson.D{primitive.E{Key: "_id", Value: id}}
-			opts := options.FindOne().SetProjection(bson.D{primitive.E{Key: "author", Value: "$author"}})
-			collection.FindOne(ctx, filter, opts).Decode(&result)
+			opts := options.FindOne().SetProjection(bson.D{
+				primitive.E{Key: "author", Value: "$author"},
+				primitive.E{Key: "post", Value: "$post"},
+			})
+			commentsCollection.FindOne(ctx, filter, opts).Decode(&result)
 
 			if result["author"] == nil {
 				response.WriteHeader(http.StatusNotFound)
@@ -278,7 +281,19 @@ func DeleteComment(db *mongo.Client) func(response http.ResponseWriter, request 
 				return
 			}
 
-			collection.FindOneAndDelete(ctx, filter)
+			updateOpts := options.FindOneAndUpdate().SetUpsert(true)
+			update := bson.D{primitive.E{
+				Key: "$pull", Value: bson.D{primitive.E{Key: "answers", Value: id}},
+			}}
+
+			postsCollection.FindOneAndUpdate(
+				ctx,
+				bson.D{primitive.E{Key: "_id", Value: result["post"]}},
+				update,
+				updateOpts,
+			)
+
+			commentsCollection.FindOneAndDelete(ctx, filter)
 
 			response.Write([]byte(`{ "message": "OK" }`))
 		}
