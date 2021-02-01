@@ -47,7 +47,7 @@ func Login(db *mongo.Client) func(response http.ResponseWriter, request *http.Re
 		var user users.User
 		json.NewDecoder(request.Body).Decode(&user)
 
-		collection := db.Database("justhink-dev").Collection("users")
+		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		defer cancel()

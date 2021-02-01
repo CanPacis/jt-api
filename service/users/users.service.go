@@ -7,6 +7,7 @@ import (
 	"jt-api/service/notification"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"firebase.google.com/go/messaging"
@@ -74,7 +75,7 @@ func GetUser(db *mongo.Client) func(response http.ResponseWriter, request *http.
 		authID, _, ok := request.BasicAuth()
 
 		if ok {
-			collection := db.Database("justhink-dev").Collection("users")
+			collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 			defer cancel()
@@ -138,7 +139,7 @@ func CreateUser(db *mongo.Client) func(response http.ResponseWriter, request *ht
 	return func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("content-type", "application/json")
 
-		collection := db.Database("justhink-dev").Collection("users")
+		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		defer cancel()
@@ -182,7 +183,7 @@ func EditUser(db *mongo.Client) func(response http.ResponseWriter, request *http
 	return func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("content-type", "application/json")
 
-		collection := db.Database("justhink-dev").Collection("users")
+		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		defer cancel()
@@ -247,7 +248,7 @@ func UpdateFCMToken(db *mongo.Client) func(response http.ResponseWriter, request
 	return func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("content-type", "application/json")
 
-		collection := db.Database("justhink-dev").Collection("users")
+		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		defer cancel()
@@ -294,7 +295,7 @@ func UserExists(db *mongo.Client) func(response http.ResponseWriter, request *ht
 		response.Header().Add("content-type", "application/json")
 		params := mux.Vars(request)
 
-		collection := db.Database("justhink-dev").Collection("users")
+		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		defer cancel()
@@ -388,7 +389,7 @@ func follow(
 	followeeID primitive.ObjectID,
 ) error {
 	if followerID != followeeID {
-		collection := db.Database("justhink-dev").Collection("users")
+		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		defer cancel()
@@ -449,7 +450,7 @@ func unfollow(
 	followerID primitive.ObjectID,
 	followeeID primitive.ObjectID,
 ) error {
-	collection := db.Database("justhink-dev").Collection("users")
+	collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 	defer cancel()
@@ -492,7 +493,7 @@ func followed(
 	followerID primitive.ObjectID,
 	followeeID primitive.ObjectID,
 ) []bson.M {
-	collection := db.Database("justhink-dev").Collection("users")
+	collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 	defer cancel()

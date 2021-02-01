@@ -48,7 +48,7 @@ func CreatePost(db *mongo.Client) func(response http.ResponseWriter, request *ht
 		communityID, _ := primitive.ObjectIDFromHex("60049bc9888d8b3284e5cb4f")
 
 		if ok {
-			collection := db.Database("justhink-dev").Collection("posts")
+			collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 			defer cancel()
@@ -98,7 +98,7 @@ func GetPost(db *mongo.Client) func(response http.ResponseWriter, request *http.
 		}
 
 		if ok {
-			collection := db.Database("justhink-dev").Collection("posts")
+			collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 			defer cancel()
@@ -244,7 +244,8 @@ func GetPersonal(db *mongo.Client) func(response http.ResponseWriter, request *h
 		authID, _, ok := request.BasicAuth()
 
 		if ok {
-			collection := db.Database("justhink-dev").Collection("posts")
+			usersCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
+			postsCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 			defer cancel()
@@ -252,11 +253,30 @@ func GetPersonal(db *mongo.Client) func(response http.ResponseWriter, request *h
 			communityID, _ := primitive.ObjectIDFromHex("60049bc9888d8b3284e5cb4f")
 			oID, _ := primitive.ObjectIDFromHex(authID)
 
+			var user bson.M
+			userOptions := options.FindOne().SetProjection(bson.D{primitive.E{Key: "follows", Value: "$follows"}})
+			err := usersCollection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: oID}}, userOptions).Decode(&user)
+			if err != nil {
+				response.WriteHeader(http.StatusInternalServerError)
+				response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+				return
+			}
+
+			authors := make([]interface{}, len(user["follows"].(primitive.A))+1)
+			for i, v := range user["follows"].(primitive.A) {
+				authors[i] = v
+			}
+			authors = append(authors, "$author")
+
 			match := bson.D{
 				primitive.E{
 					Key: "$match",
 					Value: bson.D{
 						primitive.E{Key: "community", Value: communityID},
+						primitive.E{Key: "author", Value: bson.D{primitive.E{
+							Key:   "$in",
+							Value: authors,
+						}}},
 					},
 				},
 			}
@@ -336,7 +356,7 @@ func GetPersonal(db *mongo.Client) func(response http.ResponseWriter, request *h
 
 			opts := options.Aggregate().SetMaxTime(2 * time.Second)
 
-			cursor, err := collection.Aggregate(ctx, mongo.Pipeline{
+			cursor, err := postsCollection.Aggregate(ctx, mongo.Pipeline{
 				match,
 				project,
 				lookupAuthor,
@@ -385,7 +405,7 @@ func GetNew(db *mongo.Client) func(response http.ResponseWriter, request *http.R
 		authID, _, ok := request.BasicAuth()
 
 		if ok {
-			collection := db.Database("justhink-dev").Collection("posts")
+			collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 			defer cancel()
@@ -526,7 +546,7 @@ func GetLiked(db *mongo.Client) func(response http.ResponseWriter, request *http
 		authID, _, ok := request.BasicAuth()
 
 		if ok {
-			collection := db.Database("justhink-dev").Collection("posts")
+			collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 			defer cancel()
@@ -660,8 +680,8 @@ func DeletePost(db *mongo.Client) func(response http.ResponseWriter, request *ht
 		response.Header().Add("content-type", "application/json")
 		params := mux.Vars(request)
 
-		postCollection := db.Database("justhink-dev").Collection("posts")
-		commentsCollection := db.Database("justhink-dev").Collection("comments")
+		postCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
+		commentsCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("comments")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		defer cancel()
@@ -747,8 +767,8 @@ func upvote(
 	upvoterID primitive.ObjectID,
 	postID primitive.ObjectID,
 ) error {
-	collection := db.Database("justhink-dev").Collection("posts")
-	usersCollection := db.Database("justhink-dev").Collection("users")
+	collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
+	usersCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 	defer cancel()
@@ -808,7 +828,7 @@ func downvote(
 	upvoterID primitive.ObjectID,
 	postID primitive.ObjectID,
 ) error {
-	collection := db.Database("justhink-dev").Collection("posts")
+	collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 	defer cancel()
@@ -845,7 +865,7 @@ func upvoted(
 	upvoterID primitive.ObjectID,
 	postID primitive.ObjectID,
 ) []bson.M {
-	collection := db.Database("justhink-dev").Collection("posts")
+	collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 	defer cancel()

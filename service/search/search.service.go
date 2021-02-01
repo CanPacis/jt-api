@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -28,9 +29,9 @@ func Content(db *mongo.Client) func(response http.ResponseWriter, request *http.
 		response.Header().Add("content-type", "application/json")
 		params := mux.Vars(request)
 
-		usersCollection := db.Database("justhink-dev").Collection("users")
-		postsCollection := db.Database("justhink-dev").Collection("posts")
-		communitiesCollection := db.Database("justhink-dev").Collection("communities")
+		usersCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
+		postsCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
+		communitiesCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("communities")
 
 		usersChan := make(chan []bson.M, 1)
 		postsChan := make(chan []bson.M, 1)

@@ -7,6 +7,7 @@ import (
 	"jt-api/service/notification"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"firebase.google.com/go/messaging"
@@ -46,7 +47,7 @@ func GetComments(db *mongo.Client) func(response http.ResponseWriter, request *h
 		response.Header().Add("content-type", "application/json")
 		params := mux.Vars(request)
 
-		collection := db.Database("justhink-dev").Collection("comments")
+		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("comments")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		defer cancel()
@@ -151,9 +152,9 @@ func CreateComment(db *mongo.Client) func(response http.ResponseWriter, request 
 	return func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("content-type", "application/json")
 
-		postsCollection := db.Database("justhink-dev").Collection("posts")
-		commentsCollection := db.Database("justhink-dev").Collection("comments")
-		usersCollection := db.Database("justhink-dev").Collection("users")
+		postsCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
+		commentsCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("comments")
+		usersCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		defer cancel()
@@ -243,7 +244,7 @@ func DeleteComment(db *mongo.Client) func(response http.ResponseWriter, request 
 		response.Header().Add("content-type", "application/json")
 		params := mux.Vars(request)
 
-		collection := db.Database("justhink-dev").Collection("comments")
+		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("comments")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 		defer cancel()
@@ -327,8 +328,8 @@ func upvote(
 	upvoterID primitive.ObjectID,
 	commentID primitive.ObjectID,
 ) error {
-	collection := db.Database("justhink-dev").Collection("comments")
-	usersCollection := db.Database("justhink-dev").Collection("users")
+	collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("comments")
+	usersCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 	defer cancel()
@@ -388,7 +389,7 @@ func downvote(
 	upvoterID primitive.ObjectID,
 	commentID primitive.ObjectID,
 ) error {
-	collection := db.Database("justhink-dev").Collection("comments")
+	collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("comments")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 	defer cancel()
@@ -425,7 +426,7 @@ func upvoted(
 	upvoterID primitive.ObjectID,
 	commentID primitive.ObjectID,
 ) []bson.M {
-	collection := db.Database("justhink-dev").Collection("comments")
+	collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("comments")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 	defer cancel()
