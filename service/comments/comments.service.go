@@ -45,7 +45,7 @@ type CommentActionModel struct {
 // GetComments fetch comments of a post from database
 func GetComments(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 		params := mux.Vars(request)
 		page, err := strconv.Atoi(params["page"])
 		if err != nil {
@@ -178,7 +178,7 @@ func GetComments(db *mongo.Client) func(response http.ResponseWriter, request *h
 // CreateComment create comment and register to database
 func CreateComment(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		postsCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
 		commentsCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("comments")
@@ -268,7 +268,7 @@ func CreateComment(db *mongo.Client) func(response http.ResponseWriter, request 
 // DeleteComment delete comment from database
 func DeleteComment(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 		params := mux.Vars(request)
 
 		commentsCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("comments")
@@ -332,7 +332,7 @@ func DeleteComment(db *mongo.Client) func(response http.ResponseWriter, request 
 // CommentAction is for upvoting and downvoting posts
 func CommentAction(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 		actionType := mux.Vars(request)["type"]
 
 		authID, _, ok := request.BasicAuth()

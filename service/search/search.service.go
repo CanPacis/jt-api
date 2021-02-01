@@ -26,7 +26,7 @@ type ContentResult struct {
 // Content is for searching general content
 func Content(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 		params := mux.Vars(request)
 
 		usersCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")

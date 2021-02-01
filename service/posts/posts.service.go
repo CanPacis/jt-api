@@ -41,7 +41,7 @@ type PostActionModel struct {
 // CreatePost creates post and registeres to the database
 func CreatePost(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		authID, _, ok := request.BasicAuth()
 		oID, _ := primitive.ObjectIDFromHex(authID)
@@ -85,7 +85,7 @@ func CreatePost(db *mongo.Client) func(response http.ResponseWriter, request *ht
 // GetPost fetch single post from database
 func GetPost(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		authID, _, ok := request.BasicAuth()
 		params := mux.Vars(request)
@@ -143,31 +143,10 @@ func GetPost(db *mongo.Client) func(response http.ResponseWriter, request *http.
 				primitive.E{
 					Key: "$lookup",
 					Value: bson.M{
-						"from": "users",
-						"let": bson.D{
-							primitive.E{Key: "author", Value: "$author"},
-						},
-						"pipeline": []interface{}{
-
-							bson.D{
-								primitive.E{Key: "$project", Value: bson.D{
-									primitive.E{Key: "_id", Value: "$_id"},
-									primitive.E{Key: "fullname", Value: "$fullname"},
-									primitive.E{Key: "verified", Value: "$verified"},
-									primitive.E{Key: "username", Value: "$username"},
-									primitive.E{Key: "image", Value: "$image"},
-								}},
-							},
-							bson.D{
-								primitive.E{Key: "$match", Value: bson.D{
-									primitive.E{
-										Key:   "username",
-										Value: "enes.aydin",
-									},
-								}},
-							},
-						},
-						"as": "author",
+						"from":         "users",
+						"localField":   "author",
+						"foreignField": "_id",
+						"as":           "author",
 					},
 				},
 			}
@@ -223,6 +202,8 @@ func GetPost(db *mongo.Client) func(response http.ResponseWriter, request *http.
 				return
 			}
 
+			results[0]["author"] = formatAuthor(results[0]["author"].(primitive.A)[0].(primitive.M))
+
 			json.NewEncoder(response).Encode(results[0])
 		}
 	}
@@ -231,7 +212,7 @@ func GetPost(db *mongo.Client) func(response http.ResponseWriter, request *http.
 // GetPersonal fetch personal posts from database
 func GetPersonal(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		params := mux.Vars(request)
 		page, err := strconv.Atoi(params["page"])
@@ -392,7 +373,7 @@ func GetPersonal(db *mongo.Client) func(response http.ResponseWriter, request *h
 // GetNew fetch personal posts from database
 func GetNew(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		params := mux.Vars(request)
 		page, err := strconv.Atoi(params["page"])
@@ -533,7 +514,7 @@ func GetNew(db *mongo.Client) func(response http.ResponseWriter, request *http.R
 // GetLiked fetch personal posts from database
 func GetLiked(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		params := mux.Vars(request)
 		page, err := strconv.Atoi(params["page"])
@@ -677,7 +658,7 @@ func GetLiked(db *mongo.Client) func(response http.ResponseWriter, request *http
 // DeletePost delete post from database
 func DeletePost(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 		params := mux.Vars(request)
 
 		postCollection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
@@ -728,7 +709,7 @@ func DeletePost(db *mongo.Client) func(response http.ResponseWriter, request *ht
 // PostAction is for upvoting and downvoting posts
 func PostAction(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 		actionType := mux.Vars(request)["type"]
 
 		authID, _, ok := request.BasicAuth()

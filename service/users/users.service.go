@@ -63,7 +63,7 @@ type UserActionModel struct {
 // GetUser fetch single user from database
 func GetUser(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 		params := mux.Vars(request)
 		id, err := primitive.ObjectIDFromHex(params["id"])
 		if err != nil {
@@ -137,7 +137,7 @@ func GetUser(db *mongo.Client) func(response http.ResponseWriter, request *http.
 // CreateUser create user and register to database
 func CreateUser(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -181,7 +181,7 @@ func CreateUser(db *mongo.Client) func(response http.ResponseWriter, request *ht
 // EditUser edit user and register to database
 func EditUser(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -246,7 +246,7 @@ func EditUser(db *mongo.Client) func(response http.ResponseWriter, request *http
 // UpdateFCMToken updates firebase cloud messaging token at each login
 func UpdateFCMToken(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -292,7 +292,7 @@ func UpdateFCMToken(db *mongo.Client) func(response http.ResponseWriter, request
 // UserExists find if user exists based on username or email
 func UserExists(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 		params := mux.Vars(request)
 
 		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
@@ -349,7 +349,7 @@ func UserExists(db *mongo.Client) func(response http.ResponseWriter, request *ht
 // UserAction is for following and unfollowing users
 func UserAction(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 		actionType := mux.Vars(request)["type"]
 
 		authID, _, ok := request.BasicAuth()

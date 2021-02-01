@@ -42,7 +42,7 @@ type LoginResponse struct {
 // Login authenticates user
 func Login(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		var user users.User
 		json.NewDecoder(request.Body).Decode(&user)

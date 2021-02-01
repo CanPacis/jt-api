@@ -32,7 +32,7 @@ type ImageUpload struct {
 // Image upload file to aws s3 bucket
 func Image(db *mongo.Client, heightIndex int) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		file, header, err := request.FormFile("image")
 		if err != nil {

@@ -45,7 +45,7 @@ func InitFirebase() {
 // SendToUsername sends a notification to given user
 func SendToUsername(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		params := mux.Vars(request)
 		ctx := context.Background()
@@ -113,7 +113,7 @@ func SendToUsername(db *mongo.Client) func(response http.ResponseWriter, request
 // SendToID sends a notification to given user
 func SendToID(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
-		response.Header().Add("content-type", "application/json")
+		response.Header().Add("content-type", "application/json; charset=utf-8")
 
 		params := mux.Vars(request)
 		fmt.Println(app, params["id"])
