@@ -7,6 +7,8 @@ import (
 	"jt-api/service/notification"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"firebase.google.com/go/messaging"
@@ -231,6 +233,14 @@ func GetPersonal(db *mongo.Client) func(response http.ResponseWriter, request *h
 	return func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("content-type", "application/json")
 
+		params := mux.Vars(request)
+		page, err := strconv.Atoi(params["page"])
+		if err != nil {
+			response.WriteHeader(http.StatusBadRequest)
+			response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+			return
+		}
+		limit, _ := strconv.Atoi(os.Getenv("POST_LIMIT"))
 		authID, _, ok := request.BasicAuth()
 
 		if ok {
@@ -280,31 +290,10 @@ func GetPersonal(db *mongo.Client) func(response http.ResponseWriter, request *h
 				primitive.E{
 					Key: "$lookup",
 					Value: bson.M{
-						"from": "users",
-						"let": bson.D{
-							primitive.E{Key: "author", Value: "$author"},
-						},
-						"pipeline": []interface{}{
-
-							bson.D{
-								primitive.E{Key: "$project", Value: bson.D{
-									primitive.E{Key: "_id", Value: "$_id"},
-									primitive.E{Key: "fullname", Value: "$fullname"},
-									primitive.E{Key: "verified", Value: "$verified"},
-									primitive.E{Key: "username", Value: "$username"},
-									primitive.E{Key: "image", Value: "$image"},
-								}},
-							},
-							bson.D{
-								primitive.E{Key: "$match", Value: bson.D{
-									primitive.E{
-										Key:   "username",
-										Value: "enes.aydin",
-									},
-								}},
-							},
-						},
-						"as": "author",
+						"from":         "users",
+						"localField":   "author",
+						"foreignField": "_id",
+						"as":           "author",
 					},
 				},
 			}
@@ -313,32 +302,35 @@ func GetPersonal(db *mongo.Client) func(response http.ResponseWriter, request *h
 				primitive.E{
 					Key: "$lookup",
 					Value: bson.M{
-						"from": "communities",
-						"let": bson.D{
-							primitive.E{Key: "community", Value: "$community"},
-						},
-						"pipeline": []interface{}{
-							bson.D{
-								primitive.E{Key: "$project", Value: bson.D{
-									primitive.E{Key: "_id", Value: "$_id"},
-									primitive.E{Key: "title", Value: "$title"},
-									primitive.E{Key: "image", Value: "$image"},
-									primitive.E{Key: "members", Value: bson.D{
-										primitive.E{Key: "$size", Value: "$members"},
-									}},
-								}},
-							},
-							// bson.D{
-							// 	primitive.E{Key: "$match", Value: bson.D{
-							// 		primitive.E{
-							// 			Key:   "username",
-							// 			Value: "enes.aydin",
-							// 		},
-							// 	}},
-							// },
-						},
-						"as": "community",
+						"from":         "communities",
+						"localField":   "community",
+						"foreignField": "_id",
+						"as":           "community",
 					},
+				},
+			}
+
+			sort := bson.D{
+				primitive.E{
+					Key: "$sort",
+					Value: bson.D{primitive.E{
+						Key:   "date",
+						Value: -1,
+					}},
+				},
+			}
+
+			skip := bson.D{
+				primitive.E{
+					Key:   "$skip",
+					Value: (page - 1) * limit,
+				},
+			}
+
+			limit := bson.D{
+				primitive.E{
+					Key:   "$limit",
+					Value: limit,
 				},
 			}
 
@@ -349,6 +341,9 @@ func GetPersonal(db *mongo.Client) func(response http.ResponseWriter, request *h
 				project,
 				lookupAuthor,
 				lookupCommunity,
+				sort,
+				skip,
+				limit,
 			}, opts)
 
 			if err != nil {
@@ -362,7 +357,14 @@ func GetPersonal(db *mongo.Client) func(response http.ResponseWriter, request *h
 				log.Fatal(err)
 			}
 
-			json.NewEncoder(response).Encode(results)
+			mapped := make([]bson.M, len(results))
+			for i, v := range results {
+				v["author"] = formatAuthor(v["author"].(primitive.A)[0].(primitive.M))
+				v["community"] = formatCommunity(v["community"].(primitive.A)[0].(primitive.M))
+				mapped[i] = v
+			}
+
+			json.NewEncoder(response).Encode(mapped)
 		}
 	}
 }
@@ -372,6 +374,14 @@ func GetNew(db *mongo.Client) func(response http.ResponseWriter, request *http.R
 	return func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("content-type", "application/json")
 
+		params := mux.Vars(request)
+		page, err := strconv.Atoi(params["page"])
+		if err != nil {
+			response.WriteHeader(http.StatusBadRequest)
+			response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+			return
+		}
+		limit, _ := strconv.Atoi(os.Getenv("POST_LIMIT"))
 		authID, _, ok := request.BasicAuth()
 
 		if ok {
@@ -417,42 +427,65 @@ func GetNew(db *mongo.Client) func(response http.ResponseWriter, request *http.R
 				},
 			}
 
-			lookup := bson.D{
+			lookupAuthor := bson.D{
 				primitive.E{
 					Key: "$lookup",
 					Value: bson.M{
-						"from": "users",
-						"let": bson.D{
-							primitive.E{Key: "author", Value: "$author"},
-						},
-						"pipeline": []interface{}{
-
-							bson.D{
-								primitive.E{Key: "$project", Value: bson.D{
-									primitive.E{Key: "_id", Value: "$_id"},
-									primitive.E{Key: "fullname", Value: "$fullname"},
-									primitive.E{Key: "verified", Value: "$verified"},
-									primitive.E{Key: "username", Value: "$username"},
-									primitive.E{Key: "image", Value: "$image"},
-								}},
-							},
-							bson.D{
-								primitive.E{Key: "$match", Value: bson.D{
-									primitive.E{
-										Key:   "username",
-										Value: "enes.aydin",
-									},
-								}},
-							},
-						},
-						"as": "author",
+						"from":         "users",
+						"localField":   "author",
+						"foreignField": "_id",
+						"as":           "author",
 					},
+				},
+			}
+
+			lookupCommunity := bson.D{
+				primitive.E{
+					Key: "$lookup",
+					Value: bson.M{
+						"from":         "communities",
+						"localField":   "community",
+						"foreignField": "_id",
+						"as":           "community",
+					},
+				},
+			}
+
+			sort := bson.D{
+				primitive.E{
+					Key: "$sort",
+					Value: bson.D{primitive.E{
+						Key:   "date",
+						Value: -1,
+					}},
+				},
+			}
+
+			skip := bson.D{
+				primitive.E{
+					Key:   "$skip",
+					Value: (page - 1) * limit,
+				},
+			}
+
+			limit := bson.D{
+				primitive.E{
+					Key:   "$limit",
+					Value: limit,
 				},
 			}
 
 			opts := options.Aggregate().SetMaxTime(2 * time.Second)
 
-			cursor, err := collection.Aggregate(ctx, mongo.Pipeline{match, project, lookup}, opts)
+			cursor, err := collection.Aggregate(ctx, mongo.Pipeline{
+				match,
+				project,
+				lookupAuthor,
+				lookupCommunity,
+				sort,
+				skip,
+				limit,
+			}, opts)
 
 			if err != nil {
 				response.WriteHeader(http.StatusInternalServerError)
@@ -465,7 +498,14 @@ func GetNew(db *mongo.Client) func(response http.ResponseWriter, request *http.R
 				log.Fatal(err)
 			}
 
-			json.NewEncoder(response).Encode(results)
+			mapped := make([]bson.M, len(results))
+			for i, v := range results {
+				v["author"] = formatAuthor(v["author"].(primitive.A)[0].(primitive.M))
+				v["community"] = formatCommunity(v["community"].(primitive.A)[0].(primitive.M))
+				mapped[i] = v
+			}
+
+			json.NewEncoder(response).Encode(mapped)
 		}
 	}
 }
@@ -475,6 +515,14 @@ func GetLiked(db *mongo.Client) func(response http.ResponseWriter, request *http
 	return func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("content-type", "application/json")
 
+		params := mux.Vars(request)
+		page, err := strconv.Atoi(params["page"])
+		if err != nil {
+			response.WriteHeader(http.StatusBadRequest)
+			response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+			return
+		}
+		limit, _ := strconv.Atoi(os.Getenv("POST_LIMIT"))
 		authID, _, ok := request.BasicAuth()
 
 		if ok {
@@ -520,42 +568,68 @@ func GetLiked(db *mongo.Client) func(response http.ResponseWriter, request *http
 				},
 			}
 
-			lookup := bson.D{
+			lookupAuthor := bson.D{
 				primitive.E{
 					Key: "$lookup",
 					Value: bson.M{
-						"from": "users",
-						"let": bson.D{
-							primitive.E{Key: "author", Value: "$author"},
-						},
-						"pipeline": []interface{}{
-
-							bson.D{
-								primitive.E{Key: "$project", Value: bson.D{
-									primitive.E{Key: "_id", Value: "$_id"},
-									primitive.E{Key: "fullname", Value: "$fullname"},
-									primitive.E{Key: "verified", Value: "$verified"},
-									primitive.E{Key: "username", Value: "$username"},
-									primitive.E{Key: "image", Value: "$image"},
-								}},
-							},
-							bson.D{
-								primitive.E{Key: "$match", Value: bson.D{
-									primitive.E{
-										Key:   "username",
-										Value: "enes.aydin",
-									},
-								}},
-							},
-						},
-						"as": "author",
+						"from":         "users",
+						"localField":   "author",
+						"foreignField": "_id",
+						"as":           "author",
 					},
+				},
+			}
+
+			lookupCommunity := bson.D{
+				primitive.E{
+					Key: "$lookup",
+					Value: bson.M{
+						"from":         "communities",
+						"localField":   "community",
+						"foreignField": "_id",
+						"as":           "community",
+					},
+				},
+			}
+
+			sort := bson.D{
+				primitive.E{
+					Key: "$sort",
+					Value: bson.D{primitive.E{
+						Key:   "upvotes",
+						Value: -1,
+					}, primitive.E{
+						Key:   "date",
+						Value: -1,
+					}},
+				},
+			}
+
+			skip := bson.D{
+				primitive.E{
+					Key:   "$skip",
+					Value: (page - 1) * limit,
+				},
+			}
+
+			limit := bson.D{
+				primitive.E{
+					Key:   "$limit",
+					Value: limit,
 				},
 			}
 
 			opts := options.Aggregate().SetMaxTime(2 * time.Second)
 
-			cursor, err := collection.Aggregate(ctx, mongo.Pipeline{match, project, lookup}, opts)
+			cursor, err := collection.Aggregate(ctx, mongo.Pipeline{
+				match,
+				project,
+				lookupAuthor,
+				lookupCommunity,
+				sort,
+				skip,
+				limit,
+			}, opts)
 
 			if err != nil {
 				response.WriteHeader(http.StatusInternalServerError)
@@ -568,7 +642,14 @@ func GetLiked(db *mongo.Client) func(response http.ResponseWriter, request *http
 				log.Fatal(err)
 			}
 
-			json.NewEncoder(response).Encode(results)
+			mapped := make([]bson.M, len(results))
+			for i, v := range results {
+				v["author"] = formatAuthor(v["author"].(primitive.A)[0].(primitive.M))
+				v["community"] = formatCommunity(v["community"].(primitive.A)[0].(primitive.M))
+				mapped[i] = v
+			}
+
+			json.NewEncoder(response).Encode(mapped)
 		}
 	}
 }
@@ -797,4 +878,26 @@ func upvoted(
 	}
 
 	return results
+}
+
+func formatAuthor(author primitive.M) primitive.M {
+	result := primitive.M{}
+
+	result["_id"] = author["_id"]
+	result["fullname"] = author["fullname"]
+	result["username"] = author["username"]
+	result["image"] = author["image"]
+	result["verified"] = author["verified"]
+
+	return result
+}
+
+func formatCommunity(community primitive.M) primitive.M {
+	result := primitive.M{}
+
+	result["_id"] = community["_id"]
+	result["title"] = community["title"]
+	result["image"] = community["image"]
+
+	return result
 }

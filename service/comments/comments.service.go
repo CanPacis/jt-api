@@ -238,6 +238,7 @@ func CreateComment(db *mongo.Client) func(response http.ResponseWriter, request 
 
 // DeleteComment delete comment from database
 func DeleteComment(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
+	// TODO Delete comment id from post itself as well
 	return func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("content-type", "application/json")
 		params := mux.Vars(request)

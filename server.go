@@ -59,9 +59,9 @@ func main() {
 	postsRoute := router.PathPrefix("/posts").Subrouter()
 	postsRoute.HandleFunc("/delete/{id}", middleware.AuthMiddleware(posts.DeletePost(client))).Methods("GET")
 	postsRoute.HandleFunc("/find/{id}", middleware.AuthMiddleware(posts.GetPost(client))).Methods("GET")
-	postsRoute.HandleFunc("/personal", middleware.AuthMiddleware(posts.GetPersonal(client))).Methods("GET")
-	postsRoute.HandleFunc("/new", middleware.AuthMiddleware(posts.GetNew(client))).Methods("GET")
-	postsRoute.HandleFunc("/liked", middleware.AuthMiddleware(posts.GetLiked(client))).Methods("GET")
+	postsRoute.HandleFunc("/personal/{page}", middleware.AuthMiddleware(posts.GetPersonal(client))).Methods("GET")
+	postsRoute.HandleFunc("/new/{page}", middleware.AuthMiddleware(posts.GetNew(client))).Methods("GET")
+	postsRoute.HandleFunc("/liked/{page}", middleware.AuthMiddleware(posts.GetLiked(client))).Methods("GET")
 	postsRoute.HandleFunc("/create", middleware.AuthMiddleware(posts.CreatePost(client))).Methods("POST")
 	postsRoute.HandleFunc("/action/{type}", middleware.AuthMiddleware(posts.PostAction(client))).Methods("POST")
 
