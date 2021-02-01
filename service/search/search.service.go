@@ -112,17 +112,17 @@ func getUserResults(channel chan []bson.M, collection *mongo.Collection, params 
 		},
 	}
 
-	// userSort := bson.D{
-	// 	primitive.E{
-	// 		Key: "$sort",
-	// 		Value: primitive.E{
-	// 			Key:   "",
-	// 			Value: 1,
-	// 		},
-	// 	},
-	// }
+	sort := bson.D{
+		primitive.E{
+			Key: "$sort",
+			Value: bson.D{primitive.E{
+				Key:   "followers",
+				Value: -1,
+			}},
+		},
+	}
 
-	cursor, _ := collection.Aggregate(ctx, mongo.Pipeline{match, project}, opts)
+	cursor, _ := collection.Aggregate(ctx, mongo.Pipeline{match, project, sort}, opts)
 	results := []bson.M{}
 	if err := cursor.All(context.TODO(), &results); err != nil {
 		log.Fatal(err)
@@ -186,17 +186,20 @@ func getPostResults(channel chan []bson.M, collection *mongo.Collection, params 
 		},
 	}
 
-	// postSort := bson.D{
-	// 	primitive.E{
-	// 		Key: "$sort",
-	// 		Value: primitive.E{
-	// 			Key:   "",
-	// 			Value: 1,
-	// 		},
-	// 	},
-	// }
+	sort := bson.D{
+		primitive.E{
+			Key: "$sort",
+			Value: bson.D{primitive.E{
+				Key:   "upvotes",
+				Value: -1,
+			}, primitive.E{
+				Key:   "answers",
+				Value: -1,
+			}},
+		},
+	}
 
-	cursor, _ := collection.Aggregate(ctx, mongo.Pipeline{match, project}, opts)
+	cursor, _ := collection.Aggregate(ctx, mongo.Pipeline{match, project, sort}, opts)
 	results := []bson.M{}
 	if err := cursor.All(context.TODO(), &results); err != nil {
 		log.Fatal(err)
@@ -246,17 +249,17 @@ func getCommunityResults(channel chan []bson.M, collection *mongo.Collection, pa
 		},
 	}
 
-	// communitySort := bson.D{
-	// 	primitive.E{
-	// 		Key: "$sort",
-	// 		Value: primitive.E{
-	// 			Key:   "",
-	// 			Value: 1,
-	// 		},
-	// 	},
-	// }
+	sort := bson.D{
+		primitive.E{
+			Key: "$sort",
+			Value: bson.D{primitive.E{
+				Key:   "members",
+				Value: -1,
+			}},
+		},
+	}
 
-	cursor, _ := collection.Aggregate(ctx, mongo.Pipeline{match, project}, opts)
+	cursor, _ := collection.Aggregate(ctx, mongo.Pipeline{match, project, sort}, opts)
 
 	results := []bson.M{}
 	if err := cursor.All(context.TODO(), &results); err != nil {
