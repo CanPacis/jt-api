@@ -240,7 +240,7 @@ func GetPersonal(db *mongo.Client) func(response http.ResponseWriter, request *h
 			response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
 			return
 		}
-		limit, _ := strconv.Atoi(os.Getenv("POST_LIMIT"))
+		postLimit, _ := strconv.Atoi(os.Getenv("POST_LIMIT"))
 		authID, _, ok := request.BasicAuth()
 
 		if ok {
@@ -343,14 +343,14 @@ func GetPersonal(db *mongo.Client) func(response http.ResponseWriter, request *h
 			skip := bson.D{
 				primitive.E{
 					Key:   "$skip",
-					Value: (page - 1) * limit,
+					Value: (page - 1) * postLimit,
 				},
 			}
 
 			limit := bson.D{
 				primitive.E{
 					Key:   "$limit",
-					Value: limit,
+					Value: postLimit,
 				},
 			}
 

@@ -67,7 +67,7 @@ func main() {
 
 	// Comments route
 	commentsRoute := router.PathPrefix("/comments").Subrouter()
-	commentsRoute.HandleFunc("/of/{id}", middleware.AuthMiddleware(comments.GetComments(client))).Methods("GET")
+	commentsRoute.HandleFunc("/of/{id}/{page}", middleware.AuthMiddleware(comments.GetComments(client))).Methods("GET")
 	commentsRoute.HandleFunc("/delete/{id}", middleware.AuthMiddleware(comments.DeleteComment(client))).Methods("GET")
 	commentsRoute.HandleFunc("/create", middleware.AuthMiddleware(comments.CreateComment(client))).Methods("POST")
 	commentsRoute.HandleFunc("/action/{type}", middleware.AuthMiddleware(comments.CommentAction(client))).Methods("POST")

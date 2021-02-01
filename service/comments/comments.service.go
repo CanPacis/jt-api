@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"firebase.google.com/go/messaging"
@@ -46,6 +47,13 @@ func GetComments(db *mongo.Client) func(response http.ResponseWriter, request *h
 	return func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Add("content-type", "application/json")
 		params := mux.Vars(request)
+		page, err := strconv.Atoi(params["page"])
+		if err != nil {
+			response.WriteHeader(http.StatusBadRequest)
+			response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+			return
+		}
+		commentLimit, _ := strconv.Atoi(os.Getenv("COMMENT_LIMIT"))
 
 		collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("comments")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -99,37 +107,51 @@ func GetComments(db *mongo.Client) func(response http.ResponseWriter, request *h
 				primitive.E{
 					Key: "$lookup",
 					Value: bson.M{
-						"from": "users",
-						"let": bson.D{
-							primitive.E{Key: "author", Value: "$author"},
-						},
-						"pipeline": []interface{}{
-							bson.D{
-								primitive.E{Key: "$project", Value: bson.D{
-									primitive.E{Key: "_id", Value: bson.D{primitive.E{Key: "$toString", Value: "$_id"}}},
-									primitive.E{Key: "fullname", Value: "$fullname"},
-									primitive.E{Key: "verified", Value: "$verified"},
-									primitive.E{Key: "username", Value: "$username"},
-									primitive.E{Key: "image", Value: "$image"},
-								}},
-							},
-							bson.D{
-								primitive.E{Key: "$match", Value: bson.D{
-									primitive.E{
-										Key:   "username",
-										Value: "can_pacis",
-									},
-								}},
-							},
-						},
-						"as": "author",
+						"from":         "users",
+						"localField":   "author",
+						"foreignField": "_id",
+						"as":           "author",
 					},
+				},
+			}
+
+			sort := bson.D{
+				primitive.E{
+					Key: "$sort",
+					Value: bson.D{primitive.E{
+						Key:   "upvotes",
+						Value: -1,
+					}, primitive.E{
+						Key:   "answers",
+						Value: -1,
+					}},
+				},
+			}
+
+			skip := bson.D{
+				primitive.E{
+					Key:   "$skip",
+					Value: (page - 1) * commentLimit,
+				},
+			}
+
+			limit := bson.D{
+				primitive.E{
+					Key:   "$limit",
+					Value: commentLimit,
 				},
 			}
 
 			opts := options.Aggregate().SetMaxTime(2 * time.Second)
 
-			cursor, err := collection.Aggregate(ctx, mongo.Pipeline{match, project, lookup}, opts)
+			cursor, err := collection.Aggregate(ctx, mongo.Pipeline{
+				match,
+				project,
+				lookup,
+				sort,
+				skip,
+				limit,
+			}, opts)
 
 			if err != nil {
 				response.WriteHeader(http.StatusInternalServerError)
@@ -142,7 +164,13 @@ func GetComments(db *mongo.Client) func(response http.ResponseWriter, request *h
 				log.Fatal(err)
 			}
 
-			json.NewEncoder(response).Encode(results)
+			mapped := make([]bson.M, len(results))
+			for i, v := range results {
+				v["author"] = formatAuthor(v["author"].(primitive.A)[0].(primitive.M))
+				mapped[i] = v
+			}
+
+			json.NewEncoder(response).Encode(mapped)
 		}
 	}
 }
@@ -474,4 +502,16 @@ func upvoted(
 	}
 
 	return results
+}
+
+func formatAuthor(author primitive.M) primitive.M {
+	result := primitive.M{}
+
+	result["_id"] = author["_id"]
+	result["fullname"] = author["fullname"]
+	result["username"] = author["username"]
+	result["image"] = author["image"]
+	result["verified"] = author["verified"]
+
+	return result
 }
