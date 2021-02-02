@@ -6,6 +6,7 @@ import (
 	"jt-api/middleware"
 	"jt-api/service/auth"
 	"jt-api/service/comments"
+	"jt-api/service/embed"
 	"jt-api/service/notification"
 	"jt-api/service/posts"
 	"jt-api/service/search"
@@ -89,6 +90,10 @@ func main() {
 	notificationRoute.HandleFunc("/", middleware.AuthMiddleware(notification.GetNotifications(client))).Methods("GET")
 	notificationRoute.HandleFunc("/send/u/{username}", notification.SendToUsername(client)).Methods("POST")
 	notificationRoute.HandleFunc("/send/id/{id}", notification.SendToID(client)).Methods("POST")
+
+	// Embed route
+	embedRoute := router.PathPrefix("/embed").Subrouter()
+	embedRoute.HandleFunc("/p/{id}", embed.Post(client)).Methods("GET")
 
 	fmt.Println("Server is up and listening on port " + os.Getenv("PORT"))
 	loggedRouter := handlers.LoggingHandler(os.Stdout, router)

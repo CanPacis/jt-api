@@ -3,6 +3,7 @@ package posts
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"jt-api/config"
 	"jt-api/service/notification"
 	"log"
@@ -875,4 +876,80 @@ func formatCommunity(community primitive.M) primitive.M {
 	result["image"] = community["image"]
 
 	return result
+}
+
+// AnonymousPost fetch anonymous post for embedding
+func AnonymousPost(db *mongo.Client, id primitive.ObjectID) (error, bson.M) {
+	collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("posts")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+	defer cancel()
+
+	match := bson.D{
+		primitive.E{
+			Key: "$match",
+			Value: bson.D{
+				primitive.E{Key: "_id", Value: id},
+			},
+		},
+	}
+
+	project := bson.D{
+		primitive.E{
+			Key: "$project",
+			Value: bson.D{
+				primitive.E{Key: "_id", Value: "$_id"},
+				primitive.E{Key: "community", Value: "$community"},
+				primitive.E{Key: "images", Value: "$images"},
+				primitive.E{Key: "tags", Value: "$tags"},
+				primitive.E{Key: "title", Value: "$title"},
+				primitive.E{Key: "content", Value: "$content"},
+				primitive.E{Key: "date", Value: "$date"},
+				primitive.E{Key: "author", Value: "$author"},
+				primitive.E{Key: "answers", Value: bson.D{
+					primitive.E{Key: "$size", Value: "$answers"},
+				}},
+				primitive.E{Key: "upvotes", Value: bson.D{
+					primitive.E{Key: "$size", Value: "$upvotes"},
+				}},
+			},
+		},
+	}
+
+	lookupAuthor := bson.D{
+		primitive.E{
+			Key: "$lookup",
+			Value: bson.M{
+				"from":         "users",
+				"localField":   "author",
+				"foreignField": "_id",
+				"as":           "author",
+			},
+		},
+	}
+
+	opts := options.Aggregate().SetMaxTime(2 * time.Second)
+
+	cursor, err := collection.Aggregate(ctx, mongo.Pipeline{
+		match,
+		project,
+		lookupAuthor,
+	}, opts)
+
+	if err != nil {
+		return err, nil
+	}
+
+	results := []bson.M{}
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		log.Fatal(err)
+	}
+
+	if len(results) == 0 {
+		return errors.New("Not Found"), nil
+	}
+
+	results[0]["author"] = formatAuthor(results[0]["author"].(primitive.A)[0].(primitive.M))
+
+	return nil, results[0]
 }

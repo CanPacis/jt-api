@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Justhink</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap');
+
+    html, body {
+      font-family: "Poppins";
+      margin: 0;
+      padding: 0;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .post {
+      display: flex;
+      flex-direction: column;
+      width: 400px;
+      background-color: #101113;
+      padding: 10px 16px;
+      border-radius: 10px;
+    }
+
+    .post .title {
+      font-weight: 500;
+      font-size: 18px;
+      color: #ffffff
+    }
+
+    .post .content {
+      color: #828282
+    }
+
+    .post .meta, .post .meta .left {
+      display: flex;
+    }
+
+    .post .meta {
+      margin-top: 10px;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      color: #828282
+    }
+
+    .post .meta .left {
+      align-items: center;
+      height: 40px;
+    }
+
+    .post .meta .name p:first-child {
+      color: #ffffff;
+    }
+
+    .post .meta .name p:last-child {
+      margin-top: -4px;
+    }
+
+    .post .meta .name p {
+      font-size: 12px;
+    }
+
+    .post .meta img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      margin-right: 10px;
+      margin-top: 6px;
+    }
+
+    .jt {
+      text-align: center;
+      user-select: none;
+    }
+
+    .jt img {
+      height: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="post">
+    <p class="title">{{.title}}</p>
+    <p class="content">
+      {{ range .content }}
+        {{ .content }}
+      {{ end }}
+    </p>
+    <div class="meta">
+      <div class="left">
+        <div class="avatar">
+          <img src="{{.author.image}}">
+        </div>
+        <div class="name">
+          <p>{{.author.fullname}}</p>
+          <p>{{.date}}</p>
+        </div>
+      </div>
+      <div class="right">{{.upvotes}} Oylama</div>
+    </div>
+    <p class="jt"><img src="https://justhink.s3.eu-central-1.amazonaws.com/logo.png" ></p>
+  </div>
+</body>
+</html>
