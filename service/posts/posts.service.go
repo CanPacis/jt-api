@@ -151,38 +151,12 @@ func GetPost(db *mongo.Client) func(response http.ResponseWriter, request *http.
 				},
 			}
 
-			lookupCommunity := bson.D{
-				primitive.E{
-					Key: "$lookup",
-					Value: bson.M{
-						"from": "communities",
-						"let": bson.D{
-							primitive.E{Key: "community", Value: "$community"},
-						},
-						"pipeline": []interface{}{
-							bson.D{
-								primitive.E{Key: "$project", Value: bson.D{
-									primitive.E{Key: "_id", Value: "$_id"},
-									primitive.E{Key: "title", Value: "$title"},
-									primitive.E{Key: "image", Value: "$image"},
-									primitive.E{Key: "members", Value: bson.D{
-										primitive.E{Key: "$size", Value: "$members"},
-									}},
-								}},
-							},
-						},
-						"as": "community",
-					},
-				},
-			}
-
 			opts := options.Aggregate().SetMaxTime(2 * time.Second)
 
 			cursor, err := collection.Aggregate(ctx, mongo.Pipeline{
 				match,
 				project,
 				lookupAuthor,
-				lookupCommunity,
 			}, opts)
 
 			if err != nil {

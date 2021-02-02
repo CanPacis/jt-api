@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/api/option"
 )
 
@@ -40,6 +41,99 @@ func InitFirebase() {
 		log.Fatal(err)
 	}
 	fmt.Println("Initialized firebase admin")
+}
+
+// GetNotifications fetch personal notifications from database
+func GetNotifications(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
+	return func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Add("content-type", "application/json; charset=utf-8")
+
+		authID, _, ok := request.BasicAuth()
+
+		if ok {
+			oID, _ := primitive.ObjectIDFromHex(authID)
+			collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("users")
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+			defer cancel()
+
+			match := bson.D{
+				primitive.E{
+					Key: "$match",
+					Value: bson.D{
+						primitive.E{
+							Key:   "_id",
+							Value: oID,
+						},
+					},
+				},
+			}
+
+			project := bson.D{
+				primitive.E{
+					Key: "$project",
+					Value: bson.D{
+						primitive.E{Key: "notifications", Value: "$notifications"},
+					},
+				},
+			}
+
+			unwind := bson.D{
+				primitive.E{
+					Key:   "$unwind",
+					Value: "$notifications",
+				},
+			}
+
+			sort := bson.D{
+				primitive.E{
+					Key: "$sort",
+					Value: bson.D{primitive.E{
+						Key:   "notifications.date",
+						Value: -1,
+					},
+					},
+				},
+			}
+
+			group := bson.D{
+				primitive.E{
+					Key: "$group",
+					Value: bson.D{
+						primitive.E{Key: "_id", Value: "$_id"},
+						primitive.E{
+							Key: "notifications",
+							Value: bson.D{
+								primitive.E{Key: "$push", Value: "$notifications"},
+							},
+						},
+					},
+				},
+			}
+
+			opts := options.Aggregate().SetMaxTime(2 * time.Second)
+
+			cursor, err := collection.Aggregate(ctx, mongo.Pipeline{match, project, unwind, sort, group}, opts)
+			if err != nil {
+				response.WriteHeader(http.StatusInternalServerError)
+				response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+				return
+			}
+
+			results := []bson.M{}
+			if err = cursor.All(context.TODO(), &results); err != nil {
+				log.Fatal(err)
+			}
+
+			if len(results) == 0 {
+				response.WriteHeader(http.StatusNotFound)
+				response.Write([]byte(`{ "message": "Not Found" }`))
+				return
+			}
+
+			json.NewEncoder(response).Encode(results[0]["notifications"])
+		}
+	}
 }
 
 // SendToUsername sends a notification to given user

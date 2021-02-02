@@ -86,6 +86,7 @@ func main() {
 
 	// Notification route
 	notificationRoute := router.PathPrefix("/notification").Subrouter()
+	notificationRoute.HandleFunc("/", middleware.AuthMiddleware(notification.GetNotifications(client))).Methods("GET")
 	notificationRoute.HandleFunc("/send/u/{username}", notification.SendToUsername(client)).Methods("POST")
 	notificationRoute.HandleFunc("/send/id/{id}", notification.SendToID(client)).Methods("POST")
 
