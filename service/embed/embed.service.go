@@ -21,7 +21,7 @@ func Post(db *mongo.Client) func(response http.ResponseWriter, request *http.Req
 		params := mux.Vars(request)
 		id, err := primitive.ObjectIDFromHex(params["id"])
 
-		err, post := posts.AnonymousPost(db, id)
+		post, err := posts.AnonymousPost(db, id)
 		if err != nil {
 			response.WriteHeader(http.StatusInternalServerError)
 			response.Write([]byte(`{ "message": "` + err.Error() + `" }`))

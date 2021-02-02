@@ -6,6 +6,7 @@ import (
 	"jt-api/middleware"
 	"jt-api/service/auth"
 	"jt-api/service/comments"
+	"jt-api/service/communities"
 	"jt-api/service/embed"
 	"jt-api/service/notification"
 	"jt-api/service/posts"
@@ -63,6 +64,8 @@ func main() {
 	postsRoute.HandleFunc("/personal/{page}", middleware.AuthMiddleware(posts.GetPersonal(client))).Methods("GET")
 	postsRoute.HandleFunc("/new/{page}", middleware.AuthMiddleware(posts.GetNew(client))).Methods("GET")
 	postsRoute.HandleFunc("/liked/{page}", middleware.AuthMiddleware(posts.GetLiked(client))).Methods("GET")
+	postsRoute.HandleFunc("/community/posts/{id}/{page}", middleware.AuthMiddleware(posts.CommunityPosts(client))).Methods("GET")
+	postsRoute.HandleFunc("/community/feed/{id}/{page}", middleware.AuthMiddleware(posts.CommunityFeed(client))).Methods("GET")
 	postsRoute.HandleFunc("/create", middleware.AuthMiddleware(posts.CreatePost(client))).Methods("POST")
 	postsRoute.HandleFunc("/action/{type}", middleware.AuthMiddleware(posts.PostAction(client))).Methods("POST")
 
@@ -72,6 +75,12 @@ func main() {
 	commentsRoute.HandleFunc("/delete/{id}", middleware.AuthMiddleware(comments.DeleteComment(client))).Methods("GET")
 	commentsRoute.HandleFunc("/create", middleware.AuthMiddleware(comments.CreateComment(client))).Methods("POST")
 	commentsRoute.HandleFunc("/action/{type}", middleware.AuthMiddleware(comments.CommentAction(client))).Methods("POST")
+
+	// Communities route
+	communitiesRoute := router.PathPrefix("/communities").Subrouter()
+	communitiesRoute.HandleFunc("/create", middleware.AuthMiddleware(communities.CreateCommunity(client))).Methods("POST")
+	communitiesRoute.HandleFunc("/action/{type}", middleware.AuthMiddleware(communities.CommunityAction(client))).Methods("POST")
+	communitiesRoute.HandleFunc("/of/{id}", middleware.AuthMiddleware(communities.GetUsersCommunities(client))).Methods("GET")
 
 	// Auth route
 	authRoute := router.PathPrefix("/auth").Subrouter()
