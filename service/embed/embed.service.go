@@ -13,6 +13,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// PostEmbed struct for html templating
+type PostEmbed struct {
+	Post   primitive.M
+	Width  string
+	Height string
+	Theme  string
+}
+
 // Post returns an html post embed for websites
 func Post(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
@@ -50,6 +58,13 @@ func Post(db *mongo.Client) func(response http.ResponseWriter, request *http.Req
 		date := post["date"].(primitive.DateTime).Time()
 		post["date"] = date.Format("02-Jan-2006")
 
-		tmpl.Execute(response, post)
+		embed := PostEmbed{
+			Post:   post,
+			Width:  params["width"],
+			Height: params["height"],
+			Theme:  params["theme"],
+		}
+
+		tmpl.Execute(response, embed)
 	}
 }

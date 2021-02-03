@@ -80,6 +80,109 @@ func CreateCommunity(db *mongo.Client) func(response http.ResponseWriter, reques
 	}
 }
 
+// GetCommunity fetch given community from database
+func GetCommunity(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
+	return func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Add("content-type", "application/json; charset=utf-8")
+		params := mux.Vars(request)
+
+		authID, _, ok := request.BasicAuth()
+		id, err := primitive.ObjectIDFromHex(params["id"])
+		if err != nil {
+			response.WriteHeader(http.StatusBadRequest)
+			response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+			return
+		}
+
+		if ok {
+			oID, _ := primitive.ObjectIDFromHex(authID)
+			var action CommunityActionModel
+			err := json.NewDecoder(request.Body).Decode(&action)
+
+			if err != nil {
+				response.WriteHeader(http.StatusInternalServerError)
+				response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+				return
+			}
+
+			collection := db.Database(os.Getenv("DATABASE_NAME")).Collection("communities")
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+			defer cancel()
+
+			match := bson.D{
+				primitive.E{
+					Key: "$match",
+					Value: bson.D{
+						primitive.E{Key: "_id", Value: id},
+					},
+				},
+			}
+
+			project := bson.D{
+				primitive.E{
+					Key: "$project",
+					Value: bson.D{
+						primitive.E{Key: "_id", Value: "$_id"},
+						primitive.E{Key: "title", Value: "$title"},
+						primitive.E{Key: "image", Value: "$image"},
+						primitive.E{Key: "banner", Value: "$banner"},
+						primitive.E{Key: "bio", Value: "$bio"},
+						primitive.E{Key: "founder", Value: "$founder"},
+						primitive.E{Key: "joined", Value: bson.D{
+							primitive.E{Key: "$in", Value: []interface{}{oID, "$members"}},
+						}},
+						primitive.E{Key: "members", Value: bson.D{
+							primitive.E{Key: "$size", Value: "$members"},
+						}},
+					},
+				},
+			}
+
+			lookup := bson.D{
+				primitive.E{
+					Key: "$lookup",
+					Value: bson.M{
+						"from":         "users",
+						"localField":   "founder",
+						"foreignField": "_id",
+						"as":           "founder",
+					},
+				},
+			}
+
+			opts := options.Aggregate().SetMaxTime(2 * time.Second)
+
+			cursor, err := collection.Aggregate(ctx, mongo.Pipeline{
+				match,
+				project,
+				lookup,
+			}, opts)
+
+			if err != nil {
+				response.WriteHeader(http.StatusInternalServerError)
+				response.Write([]byte(`{ "message": "` + err.Error() + `" }`))
+				return
+			}
+
+			results := []bson.M{}
+			if err = cursor.All(context.TODO(), &results); err != nil {
+				log.Fatal(err)
+			}
+
+			if len(results) == 0 {
+				response.WriteHeader(http.StatusNotFound)
+				response.Write([]byte(`{ "message": "Not Found" }`))
+				return
+			}
+
+			results[0]["founder"] = formatFounder(results[0]["founder"].(primitive.A)[0].(primitive.M))
+
+			json.NewEncoder(response).Encode(results[0])
+		}
+	}
+}
+
 // CommunityAction is for joining and leaving communities
 func CommunityAction(db *mongo.Client) func(response http.ResponseWriter, request *http.Request) {
 	return func(response http.ResponseWriter, request *http.Request) {
@@ -326,4 +429,16 @@ func joined(
 	}
 
 	return results
+}
+
+func formatFounder(author primitive.M) primitive.M {
+	result := primitive.M{}
+
+	result["_id"] = author["_id"]
+	result["fullname"] = author["fullname"]
+	result["username"] = author["username"]
+	result["image"] = author["image"]
+	result["verified"] = author["verified"]
+
+	return result
 }

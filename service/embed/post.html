@@ -20,9 +20,8 @@
     .post {
       display: flex;
       flex-direction: column;
-      width: 400px;
       background-color: #101113;
-      padding: 10px 16px;
+      padding: 16px 16px 10px 16px;
       border-radius: 10px;
     }
 
@@ -58,7 +57,7 @@
     }
 
     .post .meta .name p:last-child {
-      margin-top: -4px;
+      margin-top: -3px;
     }
 
     .post .meta .name p {
@@ -84,11 +83,12 @@
   </style>
 </head>
 <body>
-  <div class="post">
-    <p class="title">{{.title}}</p>
+  <div 
+  class="post">
+    <p class="title">{{.Post.title}}</p>
     <p class="content">
-      {{ range .content }}
-        {{ .content }}
+      {{ range .Post.content }}
+        {{ .Post.content }}
       {{ end }}
     </p>
     <div class="meta">
@@ -97,11 +97,11 @@
           <img src="{{.author.image}}">
         </div>
         <div class="name">
-          <p>{{.author.fullname}}</p>
-          <p>{{.date}}</p>
+          <p>{{.Post.author.fullname}}</p>
+          <p>{{.Post.date}}</p>
         </div>
       </div>
-      <div class="right">{{.upvotes}} Oylama</div>
+      <div class="right">{{.Post.upvotes}} Oylama</div>
     </div>
     <p class="jt"><img src="https://justhink.s3.eu-central-1.amazonaws.com/logo.png" ></p>
   </div>

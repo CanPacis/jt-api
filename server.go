@@ -78,9 +78,10 @@ func main() {
 
 	// Communities route
 	communitiesRoute := router.PathPrefix("/communities").Subrouter()
+	communitiesRoute.HandleFunc("/find/{id}", middleware.AuthMiddleware(communities.GetCommunity(client))).Methods("GET")
+	communitiesRoute.HandleFunc("/of/{id}", middleware.AuthMiddleware(communities.GetUsersCommunities(client))).Methods("GET")
 	communitiesRoute.HandleFunc("/create", middleware.AuthMiddleware(communities.CreateCommunity(client))).Methods("POST")
 	communitiesRoute.HandleFunc("/action/{type}", middleware.AuthMiddleware(communities.CommunityAction(client))).Methods("POST")
-	communitiesRoute.HandleFunc("/of/{id}", middleware.AuthMiddleware(communities.GetUsersCommunities(client))).Methods("GET")
 
 	// Auth route
 	authRoute := router.PathPrefix("/auth").Subrouter()
@@ -102,7 +103,7 @@ func main() {
 
 	// Embed route
 	embedRoute := router.PathPrefix("/embed").Subrouter()
-	embedRoute.HandleFunc("/p/{id}", embed.Post(client)).Methods("GET")
+	embedRoute.HandleFunc("/p/{id}/{theme}/{width}/{height}", embed.Post(client)).Methods("GET")
 
 	fmt.Println("Server is up and listening on port " + os.Getenv("PORT"))
 	loggedRouter := handlers.LoggingHandler(os.Stdout, router)
